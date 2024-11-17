@@ -1,0 +1,126 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+    Layout = "../Shared/_Layout.cshtml";
+}
+<div class="busca">
+    <div class="row">
+        <div class="col-6 d-flex justify-content-end">
+            <select id="ano" class="custom-select">
+                <option value="">Selecione o Ano</option>
+            </select>
+        </div>
+        <div class="col-6 d-flex justify-content-start">
+            <button class="btn btn-success" id="buscar">Buscar</button><br />
+        </div>
+    </div>
+</div>
+<div class="centralizar ">
+
+    <div id="msg"></div><br />
+
+    <div id="mensagem"></div><br />
+    <div id="feriados" class="row justify-content-center"></div>
+</div>
+
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<script src="~/js/pt-br.js"></script>
+
+<script>
+    $(document).ready(function () {
+        console.log("ready!");
+
+        var select = $("#ano");
+        for (var i = 2001; i <= 2099; i++) {
+            select.append("<option value='" + i + "'>" + i + "</option>");
+        }        
+    });
+
+    $("#buscar").on('click', function () {
+        var anoAtual = new Date().getFullYear();
+
+        if ($("#ano").val() == '') {
+            var msg = $("#msg");
+            msg.text("Por favor, selecione um ano.");
+        } else {
+            $.ajax({
+                url: "/Home/LerJson?mes=0&ano=" + $("#ano").val(),
+                type: "GET",
+                dataType: "json",
+                success: function (data) {
+                    console.log(data);
+                    var tivemosOuTeremos = (data.ano > anoAtual - 1) ? "teremos" : "tivemos";
+
+                    var mensagem = "O ano é <b>" + data.ano + "</b> e " + tivemosOuTeremos + " " + data.feriadoDiasUteis + " feriados em dias úteis :)";
+                    var feriados = $("#feriados")
+                    feriados.empty();
+                    $("#mensagem").html(mensagem);
+                    $("#mensagem").css({
+                        "background-color": "rgba(255, 255, 255, 0.8)",
+                        "padding": "10px", 
+                        "border-radius": "8px" 
+                    });
+
+                    var i = 1;
+                    $.each(data.anoFiltrado, function (index, elemento) {
+                        console.log(index, elemento);
+                        var corFundo = (elemento.dia_util === 1) ? 'background-color: #37f360;' : 'background-color: #eb7575;';
+
+                        var feriadoBox = $("<div class='miniBox col-3 mb-4 mx-3 feriado-box-" + i + "' style='" + corFundo + "' data-dia-semana='" + elemento.dia_semana + "'>" + elemento.dia + "/" + elemento.mes + "<br/>" + elemento.dia_semana + "</div>");
+
+                        feriados.append(feriadoBox);
+
+                        var feriadobox = ".feriado-box-" + i;
+
+                        adicionarMouseoverEvento(feriadobox, elemento);
+
+                        i++;
+                    });
+                },
+                error: function (error) {
+                    console.error("Erro ao fazer a solicitação AJAX", error);
+                }
+            });
+        }
+    });
+
+    function adicionarMouseoverEvento(feriadobox, elemento) {
+        $(feriadobox).on('mouseover', function () {
+            var anoSelecionado = $("#ano").val();
+
+            var datePicker = $("<div>").datepicker({
+                dateFormat: "dd/mm/yy",
+                showOtherMonths: true,
+                selectOtherMonths: true,
+                showButtonPanel: true
+            }).hide().appendTo("body");
+
+            datePicker.datepicker("destroy");
+
+            $.datepicker.setDefaults($.datepicker.regional['pt-BR']);
+
+            datePicker = $("<div>").datepicker({
+                dateFormat: "dd/mm/yy",
+                showOtherMonths: true,
+                selectOtherMonths: true,
+                showButtonPanel: true,
+                defaultDate: new Date(anoSelecionado, elemento.mes - 1, elemento.dia)
+            }).hide().appendTo("body");
+
+            $.datepicker.setDefaults($.datepicker.regional['pt-BR']);
+
+            datePicker.css({
+                position: "absolute",
+                top: $(feriadobox).offset().top + $(feriadobox).outerHeight(),
+                left: $(feriadobox).offset().left
+            }).show();
+
+            $(feriadobox).on('mouseout', function () {
+                datePicker.hide();
+            });
+        });
+    }
+</script>
+
+
